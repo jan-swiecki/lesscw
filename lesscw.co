@@ -1,0 +1,51 @@
+fs   = require 'fs-dowatch'
+exec = require 'child_process' .exec
+
+cp_exec = !(cmd,name || 'cmd',fn)->
+	exec cmd, (err,stdout,stderr)->
+		console.log "\007#name.err: "+err if err
+		console.log "#name.stdout: "+stdout if stdout
+		console.log "\007#name.stderr: "+stderr if stderr
+
+		if fn?
+			fn ...
+
+# hh:mm:ss.mmm
+get_time = ->
+	x = new Date().toISOString()
+	x = x.match /([0-9]+):([0-9]+):([0-9]+)\.([0-9]+)/
+	x[0]
+
+if process.argv.length < 3
+	console.log "Error: no file/directory parameter.\nUsage:\n - `lesscw asd.less` will output `./asd.css` and it will output `./asd.css` on every change of `asd.less`.\n - `lesscw asd` will compile all `./asd/*.less` into `./asd/*.css` and it will do so on every `./asd/*.less` file change."
+	return false
+
+path = process.argv.pop!
+
+if not fs.existsSync path
+	console.log "File or directory `#path` doesnt exist"
+	return false
+
+stats = fs.statSync path
+
+less2css = {}
+
+if stats.isFile!
+	less2css[path] = path .replace /\.less$/, '' + '.css'
+else
+	dir = fs.readdirSync path
+	dir.forEach (_path)->
+		if _path.match /\.less$/
+			less2css["#path/#_path"] = path + "/" + _path .replace /\.less$/, '' + '.css'
+
+if less2css.length == 0
+	console.log "No files found"
+	return false
+
+for source_path in less2css
+	let
+		target_path = less2css[source_path]
+		fs.dowatch source_path, ->
+			cmd = "lessc #source_path > #target_path"
+			console.log "#cmd, #{get_time()}"
+			cp_exec cmd, 'lesscw'
