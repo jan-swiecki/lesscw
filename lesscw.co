@@ -1,6 +1,8 @@
 fs   = require 'fs-dowatch'
 exec = require 'child_process' .exec
 
+FOLDER_SCAN_INTERVAL = 5000
+
 cp_exec = !(cmd,name || 'cmd',fn)->
 	exec cmd, (err,stdout,stderr)->
 		console.log "\007#name.err: "+err if err
@@ -26,26 +28,33 @@ if not fs.existsSync path
 	console.log "File or directory `#path` doesnt exist"
 	return false
 
-stats = fs.statSync path
+# less2css = {}
 
-less2css = {}
+less2css = (source_path)->
+	target_path = source_path .replace /\.less$/, '' + '.css'
+	fs.dowatch source_path, ->
+		cmd = "lessc #source_path > #target_path"
+		console.log "#cmd, #{get_time()}"
+		cp_exec cmd, 'lesscw'
 
-if stats.isFile!
-	less2css[path] = path .replace /\.less$/, '' + '.css'
-else
-	dir = fs.readdirSync path
-	dir.forEach (_path)->
-		if _path.match /\.less$/
-			less2css["#path/#_path"] = path + "/" + _path .replace /\.less$/, '' + '.css'
-
-if less2css.length == 0
-	console.log "No files found"
-	return false
-
-for source_path in less2css
-	let
-		target_path = less2css[source_path]
-		fs.dowatch source_path, ->
-			cmd = "lessc #source_path > #target_path"
-			console.log "#cmd, #{get_time()}"
-			cp_exec cmd, 'lesscw'
+recursive_walk = (path,callback)->
+	(err,stats)<- fs.stat path
+	throw err if err
+	if stats.isFile! and path.match /\.less$/
+		less2css path
+	else if stats.isDirectory!
+		(err,dir)<-fs.readdir path
+		throw err if err
+		(_path)<-dir.forEach
+		__path = "#path/#_path"
+		(err,stats)<-fs.stat __path
+		throw err if err
+		if stats.isFile! and _path.match /\.less$/
+			less2css __path
+		else
+			recursive_walk __path
+	
+recursive_walk path
+setInterval ->
+	recursive_walk path
+,FOLDER_SCAN_INTERVAL

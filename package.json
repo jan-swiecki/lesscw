@@ -1,8 +1,8 @@
 {
 	"name": "lesscw",
-	"version": "0.1.6",
-	"description": "lessc with watching. Can compile folders (`lesscw asd`: asd/*.less --> asd/*.css)",
-	"keywords": ["lessc watch", "less"],
+	"version": "0.1.7",
+	"description": "lessc with watching. Can recursively scan folders.",
+	"keywords": ["lessc watch", "lessc recursive"],
 	"bugs":
 	{
 		"email": "jan.swiecki+lesscw@gmail.com"
@@ -16,7 +16,7 @@
 	"files":
 	[
 		"package.json",
-		"README",
+		"README.md",
 		"lesscw"
 	],
 	"bin":
