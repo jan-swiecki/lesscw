@@ -1,9 +1,10 @@
 #!/usr/bin/env node
 
 (function(){
-  var fs, exec, cp_exec, get_time, path, stats, less2css, dir, source_path;
+  var fs, exec, FOLDER_SCAN_INTERVAL, cp_exec, get_time, path, less2css, recursive_walk;
   fs = require('fs-dowatch');
   exec = require('child_process').exec;
+  FOLDER_SCAN_INTERVAL = 5000;
   cp_exec = function(cmd, name, fn){
     name || (name = 'cmd');
     exec(cmd, function(err, stdout, stderr){
@@ -36,33 +37,48 @@
     console.log("File or directory `" + path + "` doesnt exist");
     return false;
   }
-  stats = fs.statSync(path);
-  less2css = {};
-  if (stats.isFile()) {
-    less2css[path] = path.replace(/\.less$/, '' + '.css');
-  } else {
-    dir = fs.readdirSync(path);
-    dir.forEach(function(_path){
-      if (_path.match(/\.less$/)) {
-        return less2css[path + "/" + _path] = path + "/" + _path.replace(/\.less$/, '' + '.css');
-      }
-    });
-  }
-  if (less2css.length == 0) {
-    console.log("No files found");
-    return false;
-  }
-  for (source_path in less2css) {
-    (fn$.call(this, source_path));
-  }
-  function fn$(source_path){
+  less2css = function(source_path){
     var target_path;
-    target_path = less2css[source_path];
-    fs.dowatch(source_path, function(){
+    target_path = source_path.replace(/\.less$/, '' + '.css');
+    return fs.dowatch(source_path, function(){
       var cmd;
       cmd = "lessc " + source_path + " > " + target_path;
       console.log(cmd + ", " + get_time());
       return cp_exec(cmd, 'lesscw');
     });
-  }
+  };
+  recursive_walk = function(path, callback){
+    return fs.stat(path, function(err, stats){
+      if (err) {
+        throw err;
+      }
+      if (stats.isFile() && path.match(/\.less$/)) {
+        return less2css(path);
+      } else if (stats.isDirectory()) {
+        return fs.readdir(path, function(err, dir){
+          if (err) {
+            throw err;
+          }
+          return dir.forEach(function(_path){
+            var __path;
+            __path = path + "/" + _path;
+            return fs.stat(__path, function(err, stats){
+              if (err) {
+                throw err;
+              }
+              if (stats.isFile() && _path.match(/\.less$/)) {
+                return less2css(__path);
+              } else {
+                return recursive_walk(__path);
+              }
+            });
+          });
+        });
+      }
+    });
+  };
+  recursive_walk(path);
+  setInterval(function(){
+    return recursive_walk(path);
+  }, FOLDER_SCAN_INTERVAL);
 }).call(this);
