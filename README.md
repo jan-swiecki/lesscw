@@ -1,3 +1,5 @@
+# Update: I suggest you use [this](https://github.com/jan-swiecki/sublime-text-2-save-and-compile) or similar.
+
 lesscw
 ======
 
